@@ -132,23 +132,27 @@ namespace BackPack_Parallel
                 var new_loots = new List<Loot>(loots);
                 new_loots.RemoveAt(i);
                 all_shuffle(ref new_loots, ref thread_valuable);  //с переходом на all_shuffle(последовательный) работает быстрее и не забивает потоки
-                //thread_valuable = new List<Loot> { new Loot("hi",1m,2m) };
-                return thread_valuable; //Выполнение цикла
+                return thread_valuable; //По окончанию цикла переход к проверке (ниже)
             },
-            (x) => //каждый поток сюда закидывает свои лучшие 
+            (x) => //Работа с локальной переменной потоков (У каждого потока свои набор лучших вещей) 
             {
-                decimal w = 0; decimal v = 0;
-                decimal w1 = 0; decimal v1 = 0;
+                var v = 0m; var w = 0m;
+                var v1 = 0m; 
                 foreach (var i in x)
                 {
                     v += i.Value;
+                    w += i.Weight;
                 }
-                if (Most_valuable != null)
-                    foreach (var j in Most_valuable)
-                    {
-                        v1 += j.Value;
-                    }
-                if (v > v1) { Most_valuable = x; }
+                lock (locker)
+                {
+                    if (Most_valuable != null)
+                        foreach (var j in Most_valuable)
+                        {
+                            v1 += j.Value;
+
+                        }
+                    if (v > v1) { Most_valuable = x; best_value = v; final_weight = w; }
+                }
             }
 
             );

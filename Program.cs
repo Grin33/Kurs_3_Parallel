@@ -49,7 +49,7 @@ namespace BackPack_Parallel
                 ,new Loot("cufflings",3000m,16m)
                 ,new Loot("chain",3000m,15.5m)
                 ,new Loot("signet",2700m,11m)
-                ,new Loot("pendent",3500m,39m)
+                //,new Loot("pendent",3500m,39m)
             };
             return loots;
         }
@@ -101,6 +101,7 @@ namespace BackPack_Parallel
             sw.Start();
             var back = new Backpack(cap.Capacity);
             back.All_shuffle_Parallel_1(loots);
+            back.Get_Most_Valuable();
             AnsPrint(back, sw);
             var s1 = sw.Elapsed;
             sw.Stop();
