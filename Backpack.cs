@@ -1,5 +1,4 @@
-﻿using BackPack_Parallel;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -7,163 +6,161 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using BackPack_Parallel;
 
 namespace BackPack_Parallel
 {
     public class Backpack
     {
-        static object locker = new(); //замок
-        public List<Loot> Most_valuable { get; private set; } = null;
-        private decimal max_Weight { get; set; }
-        private decimal best_value { get; set; }
-        private decimal final_weight { get; set; }
+        static object locker = new(); static object locker1 = new();
+        public List<Loot>? Most_Valuable { get; private set; } = null;
+        public decimal max_weight { get; set; }
+        public decimal best_value { get; set; } = 0;
+        public decimal final_weight { get; set; }
 
-        public decimal Best_value { get { return best_value; } }
-        public decimal Final_weight { get { return final_weight; } }
-        public Backpack(decimal max_Weight)
+        public Backpack(decimal max_weight)
         {
-            this.max_Weight = max_Weight;
+            this.max_weight = max_weight;
         }
+
+        public void PrintLoot(List<Loot> lootss)
+        {
+            foreach (var loot in lootss)
+            {
+                Console.WriteLine(loot);
+            }
+            Console.WriteLine();
+        }
+
         #region Straight_Methods
-        public void all_shuffle(ref List<Loot> loots) //последовательный    
+        public bool Check(ref List<Loot> templist)
         {
-            if (loots.Count > 0) check_shuffle(ref loots);
-            for (int i = 0; i < loots.Count; i++)
+            decimal iteration_weight = 0;
+            decimal iteration_value = 0;
+            foreach (Loot oneloot in templist)
             {
-                var new_loots = new List<Loot>(loots);
-                new_loots.RemoveAt(i);
-                all_shuffle(ref new_loots);
+                iteration_value += oneloot.Value;
+                iteration_weight += oneloot.Weight;
             }
-        }
-        private void Is_Requirement(ref List<Loot> loots, ref decimal req_Weight, ref decimal req_Value)
-        {
-            foreach (Loot i in loots)
+            if (iteration_weight <= max_weight)
             {
-                req_Weight += i.Weight;
-                req_Value += i.Value;
-            }
-
-        }
-        private void check_shuffle(ref List<Loot> loots)
-        {
-            decimal req_Weight = 0;
-            decimal req_Value = 0;
-            Is_Requirement(ref loots, ref req_Weight, ref req_Value);
-            {
-                if ((Most_valuable == null) && (req_Weight <= max_Weight))
+                if (iteration_value > best_value)
                 {
-                    Most_valuable = loots;
-                    best_value = req_Value;
-                    final_weight = req_Weight;
+                    best_value = iteration_value;
+                    Most_Valuable = templist;
+                    final_weight = iteration_weight;
+                    return true;
                 }
                 else
-                {
-                    if (req_Weight <= max_Weight && req_Value > best_value)
-                    {
-                        Most_valuable = loots;
-                        best_value = req_Value;
-                        final_weight = req_Weight;
-                    }
-                }
+                    return true;
             }
-        }
-        #endregion
-        #region Parallel_Methods
-        private void Is_Requirement(ref List<Loot> loots, ref decimal req_Weight, ref decimal req_Value, ref List<Loot> thread_value, ref decimal req_Weight_1, ref decimal req_Value_1)
-        {
-            foreach (Loot i in loots)
-            {
-                req_Weight += i.Weight;
-                req_Value += i.Value;
-            }
-            if (thread_value != null)
-                foreach (Loot v in thread_value)
-                {
-                    req_Weight_1 += v.Weight;
-                    req_Value_1 += v.Value;
-                }
-        }
-        private void check_shuffle(ref List<Loot> loots, ref List<Loot> thread_value)
-        {
-            decimal req_Weight = 0;
-            decimal req_Value = 0;
-            decimal req_Weight_1 = 0;
-            decimal req_Value_1 = 0;
-            Is_Requirement(ref loots, ref req_Weight, ref req_Value, ref thread_value, ref req_Weight_1, ref req_Value_1);
-            {
-                if ((thread_value == null) && (req_Weight <= max_Weight))
-                {
-                    thread_value = loots;
-                    req_Value_1 = req_Value;
-                    req_Weight_1 = req_Weight;
-                }
-                else
-                {
-                    if (req_Weight <= max_Weight && req_Value > req_Value_1)
-                    {
-                        thread_value = loots;
-                        req_Value_1 = req_Value;
-                        req_Weight_1 = req_Weight;
-                    }
-                }
-            }
+            else
+                return false;
         }
 
-        /// <summary>
-        /// Воспроизводит  рекурсивную выборку вещей последовательно
-        /// </summary>
-        /// <param name="loots">Список в котором нужно найти лучший набор вещей</param>
-        public void all_shuffle(ref List<Loot> loots, ref List<Loot> thread_valuable) //последовательный    
+        public void shuffle(ref List<Loot> loots)
         {
-            if (loots.Count > 0) check_shuffle(ref loots, ref thread_valuable);
             for (int i = 0; i < loots.Count; i++)
             {
-                var new_loots = new List<Loot>(loots);
-                new_loots.RemoveAt(i);
-                all_shuffle(ref new_loots, ref thread_valuable);
+                var templist = new List<Loot>();
+                templist.Add(loots[i]);
+                if (Check(ref templist))
+                    shuffle(ref loots, templist, i);
+                //Check(ref templist);
+                //shuffle(ref loots, templist, i);
             }
+
         }
-        public void All_shuffle_Parallel_1(List<Loot> loots) //параллельный алгоритм
+
+        public void shuffle(ref List<Loot> loots, List<Loot> templist, int item)
         {
-            if (loots.Count > 0) check_shuffle(ref loots);
-            Parallel.For(0, loots.Count, () => Most_valuable, (i, loop, thread_valuable) =>
+            var n = item + 1;
+            for (int i = n; i < loots.Count; i++)
             {
-                thread_valuable = new List<Loot>() { };
-                var new_loots = new List<Loot>(loots);
-                new_loots.RemoveAt(i);
-                all_shuffle(ref new_loots, ref thread_valuable);  //с переходом на all_shuffle(последовательный) работает быстрее и не забивает потоки
-                return thread_valuable; //По окончанию цикла переход к проверке (ниже)
-            },
-            (x) => //Работа с локальной переменной потоков (У каждого потока свои набор лучших вещей) 
-            {
-                var v = 0m; var w = 0m;
-                var v1 = 0m; 
-                foreach (var i in x)
-                {
-                    v += i.Value;
-                    w += i.Weight;
-                }
-                lock (locker)
-                {
-                    if (Most_valuable != null)
-                        foreach (var j in Most_valuable)
-                        {
-                            v1 += j.Value;
+                var temploots = new List<Loot>(templist);
+                temploots.Add(loots[i]);
+                if (Check(ref temploots))
+                    shuffle(ref loots, temploots, i);
+                //Check(ref temploots);
+                //shuffle(ref loots, temploots, i);
+            }
+        }
+        #endregion Straight_Methods
 
-                        }
-                    if (v > v1) { Most_valuable = x; best_value = v; final_weight = w; }
-                }
+        #region Parallel
+        public bool Check_Parallel(ref List<Loot> thread_loots, ref List<Loot> thread_best)
+        {
+            decimal iteration_weight = 0;
+            decimal iteration_value = 0; decimal thread_best_value = 0;
+            foreach (Loot oneloot in thread_loots)
+            {
+                iteration_value += oneloot.Value;
+                iteration_weight += oneloot.Weight;
+            }
+            foreach (Loot v in thread_best)
+            {
+                thread_best_value += v.Value;
+            }
+            if ((iteration_weight <= max_weight) && (iteration_value > thread_best_value))
+            {
+                thread_best = new List<Loot>(thread_loots);
+                return true;
+            }
+            else
+                return false;
+        }
+
+        public void nested_shuffle(ref List<Loot> loots, ref List<Loot> thread_temp, List<Loot> iter_loots, Loot i)
+        {
+            int v = loots.IndexOf(i) + 1;
+            for (int n = v; n < loots.Count; n++)
+            {
+                var iter_new_loots = new List<Loot>(iter_loots);
+                iter_new_loots.Add(loots[n]);
+                //Check_Parallel(ref iter_new_loots, ref thread_temp);
+                if (Check_Parallel(ref iter_new_loots, ref thread_temp))
+                    nested_shuffle(ref loots, ref thread_temp, iter_new_loots, loots[n]);
+
             }
 
-            );
         }
-#endregion
 
+        public void Parallel_shuffle(List<Loot> loots)
+        {
+            Parallel.ForEach<Loot, List<Loot>>(loots,
+                             () => new List<Loot>(),
+                             (i, loop, thread_temp) =>
+                             {
+                                 var iter_loots = new List<Loot>();
+                                 iter_loots.Add(i);
 
-        /// <summary>
-        /// Возвращает лучший набор вещей
-        /// </summary>
-        /// <returns> Возвращает экземпляр Loot </returns>
-        public List<Loot> Get_Most_Valuable() => Most_valuable;
+                                 //Check_Parallel(ref iter_loots, ref thread_temp);
+                                 if (Check_Parallel(ref iter_loots, ref thread_temp))
+                                    nested_shuffle(ref loots, ref thread_temp, iter_loots, i);
+                                 return thread_temp; //передается в следующую итерацию одного потока
+                             },
+                             (thread_final) =>
+                             {
+                                 decimal thread_best_value = 0;
+                                 decimal thread_best_weight = 0;
+                                 foreach (Loot oneloot in thread_final) { thread_best_value += oneloot.Value; thread_best_weight += oneloot.Weight; }
+                                 lock (locker)
+                                 {
+                                     //PrintLoot(thread_final);
+                                     if (best_value < thread_best_value)
+                                     {
+                                         Most_Valuable = thread_final;
+                                         final_weight = thread_best_weight;
+                                         best_value = thread_best_value;
+                                     }
+                                 }
+                             }
+                            );
+        }
+
+        #endregion Parallel
+
     }
 }
