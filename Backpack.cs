@@ -119,8 +119,8 @@ namespace BackPack_Parallel
             {
                 var iter_new_loots = new List<Loot>(iter_loots);
                 iter_new_loots.Add(loots[n]);
-                //Check_Parallel(ref iter_new_loots, ref thread_temp);
-                if (Check_Parallel(ref iter_new_loots, ref thread_temp))
+                Check_Parallel(ref iter_new_loots, ref thread_temp);
+                //if (Check_Parallel(ref iter_new_loots, ref thread_temp))
                     nested_shuffle(ref loots, ref thread_temp, iter_new_loots, loots[n]);
 
             }
@@ -136,8 +136,8 @@ namespace BackPack_Parallel
                                  var iter_loots = new List<Loot>();
                                  iter_loots.Add(i);
 
-                                 //Check_Parallel(ref iter_loots, ref thread_temp);
-                                 if (Check_Parallel(ref iter_loots, ref thread_temp))
+                                 Check_Parallel(ref iter_loots, ref thread_temp);
+                                 //if (Check_Parallel(ref iter_loots, ref thread_temp))
                                     nested_shuffle(ref loots, ref thread_temp, iter_loots, i);
                                  return thread_temp; //передается в следующую итерацию одного потока
                              },
