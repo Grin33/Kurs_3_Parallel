@@ -103,10 +103,15 @@ namespace BackPack_Parallel
             {
                 thread_best_value += v.Value;
             }
-            if ((iteration_weight <= max_weight) && (iteration_value > thread_best_value))
+            if (iteration_weight <= max_weight) 
             {
-                thread_best = new List<Loot>(thread_loots);
-                return true;
+                if (iteration_value > thread_best_value)
+                {
+                    thread_best = new List<Loot>(thread_loots);
+                    return true;
+                }
+                else
+                    return true;
             }
             else
                 return false;
@@ -119,8 +124,8 @@ namespace BackPack_Parallel
             {
                 var iter_new_loots = new List<Loot>(iter_loots);
                 iter_new_loots.Add(loots[n]);
-                Check_Parallel(ref iter_new_loots, ref thread_temp);
-                //if (Check_Parallel(ref iter_new_loots, ref thread_temp))
+                //Check_Parallel(ref iter_new_loots, ref thread_temp);
+                if (Check_Parallel(ref iter_new_loots, ref thread_temp))
                     nested_shuffle(ref loots, ref thread_temp, iter_new_loots, loots[n]);
 
             }
@@ -136,8 +141,8 @@ namespace BackPack_Parallel
                                  var iter_loots = new List<Loot>();
                                  iter_loots.Add(i);
 
-                                 Check_Parallel(ref iter_loots, ref thread_temp);
-                                 //if (Check_Parallel(ref iter_loots, ref thread_temp))
+                                 //Check_Parallel(ref iter_loots, ref thread_temp);
+                                 if (Check_Parallel(ref iter_loots, ref thread_temp))
                                     nested_shuffle(ref loots, ref thread_temp, iter_loots, i);
                                  return thread_temp; //передается в следующую итерацию одного потока
                              },
@@ -148,7 +153,6 @@ namespace BackPack_Parallel
                                  foreach (Loot oneloot in thread_final) { thread_best_value += oneloot.Value; thread_best_weight += oneloot.Weight; }
                                  lock (locker)
                                  {
-                                     //PrintLoot(thread_final);
                                      if (best_value < thread_best_value)
                                      {
                                          Most_Valuable = thread_final;

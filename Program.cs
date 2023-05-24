@@ -70,7 +70,8 @@ namespace BackPack_Parallel
         }
         static void Main()
         {
-            var cap = new BackpackCap("Default");
+            //var cap = new BackpackCap("Default");
+            var cap = new BackpackCap(50);
             var loots = StandartLoots();
             PrintLoots(loots);
 
